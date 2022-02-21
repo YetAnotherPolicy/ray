@@ -60,7 +60,7 @@ class Preprocessor:
         if self._i % OBS_VALIDATION_INTERVAL == 0:
             if type(observation) is list and isinstance(
                     self._obs_space, gym.spaces.Box):
-                observation = np.array(observation)
+                observation = np.array(observation).astype(self._obs_space.dtype)
             try:
                 if not self._obs_space.contains(observation):
                     raise ValueError(
