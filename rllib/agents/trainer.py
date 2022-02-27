@@ -635,21 +635,28 @@ class Trainer(Trainable):
     @override(Trainable)
     def setup(self, config: PartialTrainerConfigDict):
         env = self._env_id
-        if env:
-            config["env"] = env
-            # An already registered env.
-            if _global_registry.contains(ENV_CREATOR, env):
-                self.env_creator = _global_registry.get(ENV_CREATOR, env)
-            # A class specifier.
-            elif "." in env:
-                self.env_creator = \
-                    lambda env_context: from_config(env, env_context)
-            # Try gym/PyBullet/Vizdoom.
+
+        def _setup_env_creator(config, env, is_evaluation=False):
+            if env:
+                if is_evaluation:
+                    config["evaluation_config"]["env"] = env
+                else:
+                    config["env"] = env
+                # An already registered env.
+                if _global_registry.contains(ENV_CREATOR, env):
+                    return _global_registry.get(ENV_CREATOR, env)
+                # A class specifier.
+                elif "." in env:
+                    return \
+                        lambda env_context: from_config(env, env_context)
+                # Try gym/PyBullet/Vizdoom.
+                else:
+                    return functools.partial(
+                        gym_env_creator, env_descriptor=env)
             else:
-                self.env_creator = functools.partial(
-                    gym_env_creator, env_descriptor=env)
-        else:
-            self.env_creator = lambda env_config: None
+                return lambda env_config: None
+
+        self.env_creator = _setup_env_creator(config, env, is_evaluation=False)
 
         # Merge the supplied config with the class default, but store the
         # user-provided one.
@@ -735,8 +742,18 @@ class Trainer(Trainable):
                 # If evaluation_num_workers=0, use the evaluation set's local
                 # worker for evaluation, otherwise, use its remote workers
                 # (parallelized evaluation).
+
+                # use the default env_creator for evaluation
+                if "env" not in config["evaluation_config"]:
+                    eval_env_creator = self.env_creator
+                else:
+                    _eval_env_id = config["evaluation_config"]["env"]
+                    eval_env_creator = _setup_env_creator(config, _eval_env_id, is_evaluation=True)
+                    eval_env_creator = \
+                        lambda env_config: normalize(eval_env_creator(config["evaluation_config"]["env_config"]))
+
                 self.evaluation_workers = self._make_workers(
-                    env_creator=self.env_creator,
+                    env_creator=eval_env_creator,
                     validate_env=None,
                     policy_class=self._policy_class,
                     config=evaluation_config,
