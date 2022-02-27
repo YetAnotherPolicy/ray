@@ -749,9 +749,10 @@ class Trainer(Trainable):
                 else:
                     _eval_env_id = config["evaluation_config"]["env"]
                     eval_env_creator = _setup_env_creator(config, _eval_env_id, is_evaluation=True)
+                    
                     if self.config["normalize_actions"]:
                         eval_env_creator = \
-                            lambda env_config: normalize(eval_env_creator(config["evaluation_config"]["env_config"]))
+                            lambda evaluation_config: normalize(eval_env_creator(evaluation_config["env_config"]))
 
                 self.evaluation_workers = self._make_workers(
                     env_creator=eval_env_creator,
