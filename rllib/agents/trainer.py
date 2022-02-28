@@ -759,6 +759,7 @@ class Trainer(Trainable):
                     validate_env=None,
                     policy_class=self._policy_class,
                     config=evaluation_config,
+                    local_worker=self.config["evaluation_num_workers"] <= 0,
                     num_workers=self.config["evaluation_num_workers"])
 
     @override(Trainable)
@@ -786,7 +787,7 @@ class Trainer(Trainable):
             self, *, env_creator: Callable[[EnvContext], EnvType],
             validate_env: Optional[Callable[[EnvType, EnvContext], None]],
             policy_class: Type[Policy], config: TrainerConfigDict,
-            num_workers: int) -> WorkerSet:
+            num_workers: int, local_worker: bool = True) -> WorkerSet:
         """Default factory method for a WorkerSet running under this Trainer.
 
         Override this method by passing a custom `make_workers` into
@@ -813,6 +814,7 @@ class Trainer(Trainable):
             policy_class=policy_class,
             trainer_config=config,
             num_workers=num_workers,
+            local_worker=local_worker,
             logdir=self.logdir)
 
     @DeveloperAPI
