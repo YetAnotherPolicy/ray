@@ -39,6 +39,7 @@ class WorkerSet:
                  policy_class: Optional[Type[Policy]] = None,
                  trainer_config: Optional[TrainerConfigDict] = None,
                  num_workers: int = 0,
+                 local_worker: bool = True,
                  logdir: Optional[str] = None,
                  _setup: bool = True):
         """Create a new WorkerSet and initialize its workers.
@@ -53,6 +54,7 @@ class WorkerSet:
             trainer_config (Optional[TrainerConfigDict]): Optional dict that
                 extends the common config of the Trainer class.
             num_workers (int): Number of remote rollout workers to create.
+            local_worker (bool): weather creating a local worker.
             logdir (Optional[str]): Optional logging directory for workers.
             _setup (bool): Whether to setup workers. This is only for testing.
         """
@@ -88,17 +90,23 @@ class WorkerSet:
             else:
                 spaces = None
 
-            # Always create a local worker.
-            self._local_worker = self._make_worker(
-                cls=RolloutWorker,
-                env_creator=env_creator,
-                validate_env=validate_env,
-                policy_cls=self._policy_class,
-                worker_index=0,
-                num_workers=num_workers,
-                config=self._local_config,
-                spaces=spaces,
-            )
+            if local_worker:
+                assert num_workers <= 0, f"num_workers = {num_workers}"
+                # when setting rollout workers for evaluation, local_worker can be False
+                # as evaluation_workers can be remote workers.
+                # local_worker is True when initializing local worker for trainer.
+                self._local_worker = self._make_worker(
+                    cls=RolloutWorker,
+                    env_creator=env_creator,
+                    validate_env=validate_env,
+                    policy_cls=self._policy_class,
+                    worker_index=0,
+                    num_workers=num_workers,
+                    config=self._local_config,
+                    spaces=spaces,
+                )
+            else:
+                assert num_workers > 0, f"num_workers = {num_workers}"
 
     def local_worker(self) -> RolloutWorker:
         """Return the local rollout worker."""
