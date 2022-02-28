@@ -91,7 +91,6 @@ class WorkerSet:
                 spaces = None
 
             if local_worker:
-                assert num_workers <= 0, f"num_workers = {num_workers}"
                 # when setting rollout workers for evaluation, local_worker can be False
                 # as evaluation_workers can be remote workers.
                 # local_worker is True when initializing local worker for trainer.
@@ -105,8 +104,6 @@ class WorkerSet:
                     config=self._local_config,
                     spaces=spaces,
                 )
-            else:
-                assert num_workers > 0, f"num_workers = {num_workers}"
 
     def local_worker(self) -> RolloutWorker:
         """Return the local rollout worker."""
