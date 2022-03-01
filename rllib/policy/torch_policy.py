@@ -147,7 +147,24 @@ class TorchPolicy(Policy):
         else:
             logger.info("TorchPolicy (worker={}) running on {} GPU(s).".format(
                 worker_idx if worker_idx > 0 else "local", config["num_gpus"]))
-            gpu_ids = ray.get_gpu_ids()
+            # gpu_ids = ray.get_gpu_ids()
+
+            def get_gpu_devices() -> List[str]:
+                """Returns a list of GPU device names, e.g. ["/gpu:0", "/gpu:1"].
+                Supports both tf1.x and tf2.x.
+                Returns:
+                    List of GPU device names (str).
+                """
+                import tensorflow as tf
+                try:
+                    devices = tf.config.list_physical_devices()
+                except Exception:
+                    devices = tf.config.experimental.list_physical_devices()
+
+                # Expect "GPU", but also stuff like: "XLA_GPU".
+                return [d.name for d in devices if "GPU" in d.device_type]
+
+            gpu_ids = get_gpu_devices()
             self.devices = [
                 torch.device("cuda:{}".format(i))
                 for i, id_ in enumerate(gpu_ids) if i < config["num_gpus"]
